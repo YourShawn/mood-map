@@ -1,11 +1,10 @@
 import L from "leaflet";
-import { useMemo } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from "react-leaflet";
+import { useEffect, useMemo } from "react";
+import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import type { MoodPin } from "../api/types";
 import type { Locale } from "../i18n";
 import { t } from "../i18n";
 import { moodMeta, pinOpacity, relativeTime } from "../lib/moods";
-import { FollowCenter, MapLifecycle } from "./MapLifecycle";
 
 interface Props {
   center: { lat: number; lng: number } | null;
@@ -16,12 +15,65 @@ interface Props {
   followToken: number;
 }
 
+function FollowCenter({
+  center,
+  token,
+}: {
+  center: { lat: number; lng: number };
+  token: number;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo([center.lat, center.lng], Math.max(map.getZoom(), 14), { duration: 0.7 });
+    const onEnd = () => {
+      map.invalidateSize({ animate: false });
+    };
+    map.once("moveend", onEnd);
+    const t1 = window.setTimeout(() => map.invalidateSize({ animate: false }), 100);
+    const t2 = window.setTimeout(() => map.invalidateSize({ animate: false }), 400);
+    return () => {
+      map.off("moveend", onEnd);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [center.lat, center.lng, token, map]);
+  return null;
+}
+
 function ClickCapture({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
   useMapEvents({
     click(event) {
       onMapClick(event.latlng.lat, event.latlng.lng);
     },
   });
+  return null;
+}
+
+/** Keep tiles painted after layout shifts (composer/banner) and repeated placements. */
+function MapLifecycle({ pinCount, followToken }: { pinCount: number; followToken: number }) {
+  const map = useMap();
+  useEffect(() => {
+    const refresh = () => map.invalidateSize({ animate: false });
+    refresh();
+    const t1 = window.setTimeout(refresh, 50);
+    const t2 = window.setTimeout(refresh, 250);
+    const t3 = window.setTimeout(refresh, 600);
+    window.addEventListener("resize", refresh);
+    const ro = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => refresh())
+      : null;
+    const container = map.getContainer();
+    ro?.observe(container);
+    const parent = container.parentElement;
+    if (parent) ro?.observe(parent);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+      window.removeEventListener("resize", refresh);
+      ro?.disconnect();
+    };
+  }, [map, pinCount, followToken]);
   return null;
 }
 
@@ -76,13 +128,15 @@ export function MoodMap({ center, pins, locale, onMapClick, onDelete, followToke
       className="mood-map"
       zoomControl={false}
       attributionControl
+      preferCanvas={false}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        maxZoom={19}
       />
-      <ClickCapture onMapClick={onMapClick} />
       <MapLifecycle pinCount={pins.length} followToken={followToken} />
+      <ClickCapture onMapClick={onMapClick} />
       {center ? <FollowCenter center={center} token={followToken} /> : null}
       {markers}
     </MapContainer>
