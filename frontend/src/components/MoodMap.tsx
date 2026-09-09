@@ -1,10 +1,11 @@
 import L from "leaflet";
-import { useEffect, useMemo } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { useMemo } from "react";
+import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from "react-leaflet";
 import type { MoodPin } from "../api/types";
 import type { Locale } from "../i18n";
 import { t } from "../i18n";
 import { moodMeta, pinOpacity, relativeTime } from "../lib/moods";
+import { FollowCenter, MapLifecycle } from "./MapLifecycle";
 
 interface Props {
   center: { lat: number; lng: number } | null;
@@ -13,20 +14,6 @@ interface Props {
   onMapClick: (lat: number, lng: number) => void;
   onDelete: (id: string) => void;
   followToken: number;
-}
-
-function FollowCenter({
-  center,
-  token,
-}: {
-  center: { lat: number; lng: number };
-  token: number;
-}) {
-  const map = useMap();
-  useEffect(() => {
-    map.flyTo([center.lat, center.lng], Math.max(map.getZoom(), 14), { duration: 0.7 });
-  }, [center.lat, center.lng, token, map]);
-  return null;
 }
 
 function ClickCapture({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
@@ -95,6 +82,7 @@ export function MoodMap({ center, pins, locale, onMapClick, onDelete, followToke
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <ClickCapture onMapClick={onMapClick} />
+      <MapLifecycle pinCount={pins.length} followToken={followToken} />
       {center ? <FollowCenter center={center} token={followToken} /> : null}
       {markers}
     </MapContainer>
