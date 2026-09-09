@@ -5,7 +5,7 @@ spring:
   application:
     name: mood-map
   datasource:
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:moodmap}?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8&connectionTimeZone=UTC
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:moodmap}?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8&connectionTimeZone=UTC
     username: ${MYSQL_USER:moodmap}
     password: ${MYSQL_PASSWORD:moodmap_dev}
   jpa:

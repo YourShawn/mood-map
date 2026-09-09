@@ -38,12 +38,12 @@ Flyway 管表结构（主键、外键、CHECK、索引）。OpenAPI：`/swagger-
 
 ### 本地运行
 
-需要 Java 17+、Maven、MySQL 8、Node 20+。
+需要 Java 17+、Maven、MySQL 8、Node 20+。MySQL **只能**通过本机回环或私有网络访问，不要把数据库绑到公网 IP，也不要在已提交的配置里写公网主机名。
 
 ```bash
 cp .env.example .env
-# 创建库与用户（与 application.yml 默认值一致）
-mysql -e "CREATE DATABASE moodmap CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+# 在本机回环上创建库与用户（MYSQL_HOST=127.0.0.1，与 application.yml 默认值一致）
+mysql -h 127.0.0.1 -e "CREATE DATABASE moodmap CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
           CREATE USER 'moodmap'@'localhost' IDENTIFIED BY 'moodmap_dev';
           GRANT ALL ON moodmap.* TO 'moodmap'@'localhost';"
 
@@ -54,13 +54,27 @@ cd frontend && npm install && npm run dev
 
 浏览器打开 [http://localhost:5173](http://localhost:5173)。允许定位，或直接点地图。
 
-仅启动数据库：`docker compose -f docker-compose.dev.yml up`
+可选：仅在本机回环启动数据库：`docker compose -f docker-compose.dev.yml up`（主机侧仅监听 `127.0.0.1:3306`）。
 
 ### Docker Compose
 
+默认 `docker compose up` **不会**启动 MySQL，请把 `MYSQL_HOST` 指向外部实例：
+
+- 与 Docker 同机：`MYSQL_HOST=host.docker.internal` 或宿主机网关
+- 同一 Compose 内部网络：用内部服务名（例如可选 profile 下的 `mysql`）
+- 生产：未提交的 `.env` 里写私有主机名或 localhost
+
 ```bash
 cp .env.example .env   # 至少改 JWT_SECRET
+# 容器内访问宿主机 MySQL 请把 MYSQL_HOST 设为 host.docker.internal
 docker compose up --build
+```
+
+可选的单机演示（启动捆绑 MySQL，主机侧仅监听 `127.0.0.1:3306`）：
+
+```bash
+# 在 .env 中设置 MYSQL_HOST=mysql，然后：
+docker compose --profile bundled-mysql up --build
 ```
 
 应用：`http://localhost` · API：`http://localhost:8080` · OpenAPI UI：`http://localhost:8080/swagger-ui.html`
@@ -76,7 +90,7 @@ cd frontend && npm test
 
 ### 配置
 
-见 `.env.example`。`MOOD_TTL_HOURS` 默认 24。`JWT_SECRET` 至少 32 字节。
+见 `.env.example`。`MOOD_TTL_HOURS` 默认 24。`JWT_SECRET` 至少 32 字节。`MYSQL_HOST` 在已提交示例中仅为 `127.0.0.1`；生产请在未提交的 `.env` 里写私有主机名或 localhost，绝不要写公网 IP。
 
 ---
 
@@ -105,27 +119,52 @@ users 1──< moods   (PK/FK, expires_at, geo index)
 
 ### Run locally
 
-Java 17+, Maven, MySQL 8, Node 20+.
+Java 17+, Maven, MySQL 8, Node 20+. MySQL must be reachable **only on localhost or a private network**. Do not expose it on a public IP or put a public host in committed config.
 
 ```bash
+cp .env.example .env
+# Create the DB on loopback (MYSQL_HOST=127.0.0.1)
+mysql -h 127.0.0.1 -e "CREATE DATABASE moodmap CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+          CREATE USER 'moodmap'@'localhost' IDENTIFIED BY 'moodmap_dev';
+          GRANT ALL ON moodmap.* TO 'moodmap'@'localhost';"
+
 cd backend && mvn spring-boot:run
 cd frontend && npm install && npm run dev
 ```
 
 Vite proxies `/api` to `http://127.0.0.1:8080`.
 
+Optional: start MySQL only on loopback with `docker compose -f docker-compose.dev.yml up` (published only on `127.0.0.1:3306`).
+
 ### Docker Compose
+
+Default `docker compose up` does **not** start MySQL; point `MYSQL_HOST` at an external instance:
+
+- Same host as Docker: `host.docker.internal` or the host gateway (Linux Compose maps `host.docker.internal` via `extra_hosts`).
+- Another container on an internal Compose network: that service hostname (for example `mysql` with the optional profile below).
+- Production: a private hostname or localhost in uncommitted `.env`.
 
 ```bash
 cp .env.example .env
+# Compose cannot use 127.0.0.1 inside the backend container for host MySQL.
+# Set MYSQL_HOST=host.docker.internal in .env (or the host gateway).
 docker compose up --build
+```
+
+Optional solo local demo (bundled MySQL on the Compose network, published only on `127.0.0.1:3306`):
+
+```bash
+# Set MYSQL_HOST=mysql in .env, then:
+docker compose --profile bundled-mysql up --build
 ```
 
 Then open `http://localhost`.
 
 ### Tests / OpenAPI
 
-`mvn test` in `backend/` (API smoke tests against MySQL `moodmap_test`). `npm test` in `frontend/`. Live spec: `/v3/api-docs`.
+`mvn test` in `backend/` (API smoke tests against MySQL `moodmap_test` on `127.0.0.1`). `npm test` in `frontend/`. Live spec: `/v3/api-docs`.
+
+See `.env.example`. `MYSQL_HOST` in committed examples is `127.0.0.1` only; production uses a private hostname or localhost in uncommitted `.env`. Never a public IP.
 
 ### License
 
