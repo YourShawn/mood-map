@@ -40,7 +40,7 @@ springdoc:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:dev-only-change-me-32-chars-min}
+    secret: ${JWT_SECRET:dev-only-change-me-use-a-long-random-secret}
     ttl-hours: ${JWT_TTL_HOURS:720}
   cors:
     origins: ${CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://localhost:80}
