@@ -1,0 +1,22 @@
+# MySQL only — run the Spring Boot API and Vite SPA on the host.
+services:
+  mysql:
+    image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone=+00:00
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-moodmap}
+      MYSQL_USER: ${MYSQL_USER:-moodmap}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-moodmap_dev}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - moodmap_mysql_dev:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  moodmap_mysql_dev:
