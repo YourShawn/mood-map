@@ -32,3 +32,4 @@ npm-debug.log*
 Thumbs.db
 coverage/
 .nyc_output/
+docker-compose.override.yml
